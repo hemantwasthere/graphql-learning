@@ -1,7 +1,7 @@
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
 import express from 'express';
-import bodyParser = require('body-parser');
+import { prismaClient } from './lib/db';
 
 async function init() {
     const app = express()
@@ -10,21 +10,51 @@ async function init() {
     // Create graphql server
     const gqlServer = new ApolloServer({
         typeDefs: `
+            type User {
+                id: ID!
+                firstName: String!
+                lastName: String!
+                email: String!
+                profileImageURL: String
+                password: String!
+                salt: String
+            }
+
             type Query {
-                hello: String!
-                say(name: String!): String!
+                getUsers: [User!]!
+            }
+
+            type Mutation {
+                createUser(firstName: String!, lastName: String!, email: String!, password: String!): Boolean
             }
         `,
         resolvers: {
             Query: {
-                hello: () => 'Hello World!',
-                say: (parent, { name }: { name: string }) => `Hey ${name}, How are you?`
+                getUsers: async () => {
+                    const users = await prismaClient.user.findMany()
+                    return users
+                }
+            },
+            Mutation: {
+                createUser: async (_, { firstName, lastName, email, password }:
+                    { firstName: string, lastName: string, email: string, password: string }
+                ) => {
+                    await prismaClient.user.create({
+                        data: {
+                            firstName,
+                            lastName,
+                            email,
+                            password,
+                            salt: 'random_salt'
+                        }
+                    })
+                    return true
+                }
             }
         }
     })
 
     app.use(express.json())
-    // app.use(bodyParser.json())
 
     // start the graphql server
     await gqlServer.start()
