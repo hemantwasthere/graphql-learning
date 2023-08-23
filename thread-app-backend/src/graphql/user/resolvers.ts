@@ -14,6 +14,15 @@ const queries = {
     const token = await UserService.getUserToken(payload);
     return token;
   },
+
+  getCurrentLoggedInUser: async (_: any, parameteres: any, context: any) => {
+    if (context && context.user) {
+      const user = await UserService.getUserById(context.user.id);
+      return user;
+    } else {
+      throw new Error("Unauthorized");
+    }
+  },
 };
 
 const mutations = {
